@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>题库内容 - 人工智能训练师（三级）</title>
+    <link rel="stylesheet" href="css/style.css?v=20260703d">
+</head>
+<body>
+    <div class="container">
+        <header class="site-header quiz-header">
+            <a href="index.html" class="btn btn-secondary">← 返回首页</a>
+            <h1 id="page-title">题库内容</h1>
+            <span class="quiz-header-spacer"></span>
+        </header>
+
+        <div id="loading" class="loading">正在加载题库...</div>
+        <div id="error" class="error hidden">加载题库失败。请关闭当前页面，双击运行 start_server.bat 启动本地服务器，然后访问 http://localhost:8080 。</div>
+
+        <main id="bank-main" class="hidden">
+            <div id="questions-list"></div>
+        </main>
+    </div>
+
+    <script src="js/quiz.js?v=20260703b"></script>
+</body>
+</html>

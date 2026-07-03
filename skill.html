@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>操作技能考核 - 人工智能训练师（三级）</title>
+    <link rel="stylesheet" href="css/style.css?v=20260703d">
+    <script src="js/marked.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="site-header quiz-header">
+            <a href="index.html" class="btn btn-secondary">← 返回首页</a>
+            <h1 id="page-title">操作技能考核</h1>
+            <span class="quiz-header-spacer"></span>
+        </header>
+
+        <div id="loading" class="loading">正在加载...</div>
+        <div id="error" class="error hidden">
+            加载失败。请确保通过 <code>start_server.bat</code> 启动本地服务器后访问。
+        </div>
+
+        <main id="skill-main" class="hidden"></main>
+    </div>
+
+    <script>
+    (() => {
+        marked.setOptions({ breaks: true, gfm: true });
+
+        const params = new URLSearchParams(window.location.search);
+        const itemName = params.get('item') || '操作技能';
+
+        // 单元名称 → 目录名
+        const labelToDir = {
+            '业务流程设计': '1-业务流程设计',
+            '业务模块效果优化': '2-业务模块效果优化',
+            '数据处理规范制定': '3-数据处理规范制定',
+            '算法测试': '4-算法测试',
+            '智能系统监控和优化': '5-智能系统监控和优化',
+            '人机交互流程设计': '6-人机交互流程设计',
+            '培训': '7-培训',
+            '指导': '8-指导'
+        };
+
+        // 题目标题由页面维护，不依赖 markdown 文件中的 # 标题
+        const unitTitles = {
+            "业务流程设计": [
+                "智能医疗系统中的业务数据处理流程设计",
+                "智能农业系统中的业务数据采集和处理流程设计",
+                "金融机构信用评估系统中的业务数据审核流程设计",
+                "电商平台用户行为分析系统的数据采集与处理流程设计",
+                "智能交通系统的数据采集、处理和审核流程设计",
+            ],
+            "业务模块效果优化": [
+                "顾客评价情感识别业务模块效果优化",
+                "老年人健康监测与管理服务业务模块效果优化",
+                "智慧金融服务业务模块效果优化",
+                "智能卖点生成系统业务模块效果优化",
+                "腾讯云智能数智人系统业务模块效果优化",
+            ],
+            "数据处理规范制定": [
+                "智慧交通中燃油效率模型的数据清洗和标注流程设计",
+                "低碳生活行为影响因素数据清洗和标注流程设计",
+                "信用评分模型数据清洗和标注流程设计",
+                "医疗研究数据清洗和标注设计",
+                "健康与营养咨询数据预处理与数据规范设计",
+            ],
+            "算法测试": [
+                "智能信用评分Logistic回归模型开发与测试",
+                "智慧交通中燃油效率随机森林模型开发与测试",
+                "日常运动量随机森林预测模型开发与测试",
+                "低碳生活行为影响因素预测线性回归模型开发与测试",
+                "智能步数预测模型开发与测试",
+            ],
+            "智能系统监控和优化": [
+                "智能音箱产品的数据分析与优化",
+                "智能照明系统的数据分析与优化",
+                "智能健康手环的数据分析与优化",
+                "智能健康监测系统的数据分析与优化",
+                "智能家居环境控制系统的数据分析与优化",
+            ],
+            "人机交互流程设计": [
+                "图像识别评估系统交互流程设计",
+                "手写数字识别系统交互流程设计",
+                "面部表情识别系统交互流程设计",
+                "花朵智能识别系统交互流程设计",
+                "人脸AI智能检测系统交互流程设计",
+            ],
+            "培训": [
+                "Label studio培训大纲编写",
+                "爬虫培训大纲编写",
+                "数据清洗培训大纲编写",
+                "Pandas数据清洗培训大纲编写",
+                "Python数据可视化培训大纲编写",
+            ],
+            "指导": [
+                "智能零售分析系统数据采集和处理指导",
+                "AI辅助的医疗影像诊断系统数据采集和处理指导",
+                "AI智能安防监控系统采集和处理指导",
+                "自动驾驶汽车感知系统数据采集与标注指导",
+                "智能化数据标注在文化遗产数字化保护中的应用指导",
+            ],
+        };
+
+
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error');
+        const mainEl = document.getElementById('skill-main');
+        const pageTitleEl = document.getElementById('page-title');
+
+        document.title = itemName + ' - 人工智能训练师（三级）';
+        pageTitleEl.textContent = itemName;
+
+        // ======== Markdown 图片路径解析 ========
+        // markdown 文件中的相对图片路径需要基于 markdown 文件自身位置解析，
+        // 而不是基于当前 HTML 页面（skill.html）的位置。
+        function resolveUrl(baseUrl, relativeUrl) {
+            if (!relativeUrl || /^(https?:\/\/|\/\/|data:)/i.test(relativeUrl)) {
+                return relativeUrl;
+            }
+            // 返回完整 URL，而不是 pathname，以支持子目录部署
+            return new URL(relativeUrl, baseUrl).href;
+        }
+
+        function parseMd(md, baseUrl) {
+            const renderer = new marked.Renderer();
+            renderer.image = function(href, title, text) {
+                const src = resolveUrl(baseUrl, href);
+                const alt = text || '';
+                const titleAttr = title ? ` title="${title}"` : '';
+                return `<img src="${src}" alt="${alt}"${titleAttr} loading="lazy" onerror="this.onerror=null;this.classList.add('img-load-error');this.insertAdjacentHTML('afterend','<p style=\\'color:#c0392b\\'>图片加载失败：' + this.src + '</p>');">`;
+            };
+            return marked.parse(md, { renderer });
+        }
+
+        // ======== 渲染 ========
+        function render(questions) {
+            mainEl.innerHTML = `
+                <div id="skill-questions"></div>
+            `;
+
+            const container = document.getElementById('skill-questions');
+
+            questions.forEach((q, qi) => {
+                const card = document.createElement('div');
+                card.className = 'skill-question';
+
+                // 标题
+                const header = document.createElement('div');
+                header.className = 'skill-question-header';
+                header.innerHTML = `
+                    <span class="bank-number">第 ${qi + 1} 题</span>
+                    <span class="skill-question-title">${q.title}</span>
+                `;
+                card.appendChild(header);
+
+                // 工作任务
+                const taskSection = document.createElement('div');
+                taskSection.className = 'skill-section';
+                taskSection.innerHTML = `
+                    <div class="section-title-bar"><h4>工作任务</h4></div>
+                    <div class="section-view">${parseMd(q.taskMd, q.taskBaseUrl)}</div>
+                `;
+                card.appendChild(taskSection);
+
+                // 参考答案
+                const answerSection = document.createElement('div');
+                answerSection.className = 'skill-section';
+                answerSection.innerHTML = `<div class="section-title-bar"><h4>参考答案</h4></div>`;
+                const answerBody = document.createElement('div');
+                answerBody.className = 'section-view';
+
+                if (q.answerMd) {
+                    answerBody.innerHTML = parseMd(q.answerMd, q.answerBaseUrl);
+                } else {
+                    answerBody.innerHTML = '<p class="missing-answer">暂无答案。</p>';
+                }
+
+                answerSection.appendChild(answerBody);
+                card.appendChild(answerSection);
+
+                container.appendChild(card);
+            });
+        }
+
+        // ======== 加载 ========
+        async function init() {
+            const dirName = labelToDir[itemName];
+            if (!dirName) {
+                loadingEl.classList.add('hidden');
+                errorEl.textContent = '未找到单元：' + itemName;
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            const baseDir = 'content/operations/' + dirName;
+            const questions = [];
+
+            // 从 1 开始逐个加载，直到 404
+            for (let qi = 1; ; qi++) {
+                const taskUrl = baseDir + '/' + qi + '-task.md';
+                const taskResp = await fetch(taskUrl);
+                if (!taskResp.ok) break;
+
+                const taskMd = await taskResp.text();
+                // markdown 文件完整 URL，用于解析其中的相对图片路径
+                const taskBaseUrl = new URL(taskUrl, window.location.href).href;
+
+                // 标题由页面维护，不依赖 markdown 内容
+                const titles = unitTitles[dirName.split('-')[1]] || [];
+                const title = titles[qi - 1] || '第 ' + qi + ' 题';
+                // markdown 中即使写了 # 标题也忽略，只取正文
+                const taskBody = taskMd.replace(/^#\s+.+\n+/, '').trim();
+
+                // 加载参考答案（代码+文字合并在一个文件，用 ``` 围栏隔离）
+                let answerMd = '';
+                const answerUrl = baseDir + '/' + qi + '-answer.md';
+                const answerBaseUrl = new URL(answerUrl, window.location.href).href;
+                try {
+                    const answerResp = await fetch(answerUrl);
+                    if (answerResp.ok) {
+                        answerMd = await answerResp.text();
+                    }
+                } catch (e) { /* 文件不存在 */ }
+
+                questions.push({ id: qi, title, taskMd: taskBody, answerMd, taskBaseUrl, answerBaseUrl });
+            }
+
+            if (questions.length === 0) {
+                loadingEl.classList.add('hidden');
+                errorEl.textContent = '未找到题目文件，请检查 content/operations/' + dirName + '/';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            render(questions);
+            loadingEl.classList.add('hidden');
+            mainEl.classList.remove('hidden');
+        }
+
+        init();
+    })();
+    </script>
+</body>
+</html>
